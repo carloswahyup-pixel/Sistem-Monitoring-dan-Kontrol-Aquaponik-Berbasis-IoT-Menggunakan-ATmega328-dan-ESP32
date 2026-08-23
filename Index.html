@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Aquaponic Control System</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+        :root {
+            --bg-main: #08171d;
+            --sidebar-bg: #0d2028;
+            --card-bg: #102832;
+            --text-primary: #e8f7f3;
+            --text-muted: #8aa8aa;
+            --accent-orange: #ff9b5c;
+            --accent-orange-light: rgba(255,155,92,.12);
+            --accent-green: #7be495;
+            --accent-green-light: rgba(123,228,149,.13);
+            --accent-blue: #53c7eb;
+            --accent-blue-light: rgba(83,199,235,.12);
+            --border-color: rgba(126,206,199,.18);
+            --shadow-sm: 0 12px 30px rgba(0,0,0,.22);
+            --shadow-md: 0 18px 42px rgba(0,0,0,.28);
+        }
+
+        * { box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { 
+            margin: 0; 
+            background: radial-gradient(circle at 75% 0%, #123b43 0, transparent 32%), var(--bg-main); 
+            color: var(--text-primary); 
+            display: flex; 
+            min-height: 100vh; 
+        }
+
+        /* --- SIDEBAR --- */
+        .sidebar {
+            width: 260px;
+            background: rgba(13,32,40,.94);
+            border-right: 1px solid var(--border-color);
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: fixed;
+            height: 100vh;
+            z-index: 100;
+            box-shadow: var(--shadow-md);
+        }
+
+        .brand { display: flex; align-items: center; gap: 12px; padding: 0 12px 24px; border-bottom: 1px solid var(--border-color); }
+        .brand-icon { width: 40px; height: 40px; background: var(--accent-orange-light); border-radius: 12px; display: grid; place-items: center; font-size: 20px; }
+        .brand-title { font-weight: 800; font-size: 19px; line-height: 1.2; color: var(--text-primary); }
+        .brand-sub { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+
+        .nav-menu { display: flex; flex-direction: column; gap: 4px; margin-top: 16px; overflow-y: auto; }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 13px 14px;
+            border-radius: 10px;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 15px;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .nav-item:hover { background: rgba(83,199,235,.08); color: var(--text-primary); }
+        .nav-item.active { background: rgba(255,155,92,.13); color: var(--accent-orange); }
+        .nav-icon { font-size: 18px; width: 20px; text-align: center; }
+
+        .sidebar-widgets { display: flex; flex-direction: column; gap: 12px; margin-top: auto; padding-top: 16px; }
+        .widget-card { background: #0b2029; border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; }
+        .widget-label { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .widget-val { font-size: 23px; font-weight: 800; margin: 4px 0; color: var(--text-primary); }
+        .widget-status { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+
+        /* --- MAIN CONTENT --- */
+        .main-wrapper { margin-left: 260px; flex: 1; padding: 34px 42px; }
+
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .page-title { font-size: 30px; font-weight: 800; color: var(--text-primary); margin: 0; }
+        .page-desc { font-size: 14px; color: var(--text-muted); margin-top: 4px; }
+        .header-meta { display: flex; align-items: center; gap: 12px; }
+        .meta-box { background: rgba(16,40,50,.9); border: 1px solid var(--border-color); border-radius: 10px; padding: 8px 14px; text-align: right; box-shadow: var(--shadow-sm); }
+        .meta-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+        .meta-value { font-size: 16px; font-weight: 700; color: var(--text-primary); font-family: monospace; }
+        .user-badge { display: flex; align-items: center; gap: 10px; background: rgba(16,40,50,.9); border: 1px solid var(--border-color); border-radius: 30px; padding: 6px 14px; font-size: 14px; box-shadow: var(--shadow-sm); }
+        .avatar { width: 34px; height: 34px; border-radius: 50%; background: #203943; display: grid; place-items: center; font-size: 14px; font-weight: 700; }
+
+        .view-content { display: none; animation: fadeIn 0.3s ease-in-out; }
+        .view-content.active { display: block; }
+
+        /* --- CARD STYLING --- */
+        .interactive-aquarium-card {
+            position: relative;
+            background: linear-gradient(135deg, rgba(10,38,47,.96), rgba(13,57,57,.78));
+            border: 1px solid rgba(123,228,149,.3);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 24px;
+            overflow: hidden;
+            box-shadow: 0 0 25px rgba(123,228,149,.15);
+        }
+        .aquarium-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            position: relative;
+            z-index: 2;
+        }
+        .aquarium-title { font-size: 18px; font-weight: 800; color: var(--accent-green); display: flex; align-items: center; gap: 8px; }
+        .pulse-node { width: 10px; height: 10px; background: var(--accent-green); border-radius: 50%; box-shadow: 0 0 10px var(--accent-green); animation: pulse 1.5s infinite; }
+        
+        canvas#aquaponicCanvas {
+            width: 100%;
+            height: 220px;
+            border-radius: 12px;
+            background: radial-gradient(circle at 50% 100%, #0d3846, #051821);
+            border: 1px solid rgba(126,206,199,.2);
+            display: block;
+        }
+
+        .card { background: rgba(16,40,50,.9); border: 1px solid var(--border-color); border-radius: 14px; padding: 24px; box-shadow: var(--shadow-sm); margin-bottom: 20px; }
+        .banner-card { background: linear-gradient(135deg, rgba(19,65,68,.94), rgba(16,40,50,.96)); border: 1px solid rgba(123,228,149,.25); }
+        .card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .card-title-sm { font-size: 12px; font-weight: 800; color: var(--accent-blue); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+        .card-title { font-size: 21px; font-weight: 700; margin: 0; color: var(--text-primary); }
+        .card-desc { font-size: 14px; color: var(--text-muted); margin-top: 4px; line-height: 1.5; }
+
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        .grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+
+        .sensor-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+        .sensor-card { background: rgba(11,32,41,.86); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; min-height: 154px; }
+        .sensor-card.wide { grid-column: span 2; }
+        .sensor-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+        .sensor-icon { font-size: 24px; line-height: 1; }
+        .sensor-name { color: var(--text-muted); font-size: 12px; font-weight: 700; text-transform: uppercase; margin-top: 9px; }
+        .sensor-value { color: var(--text-primary); font-size: 25px; font-weight: 800; margin-top: 6px; }
+        .sensor-unit { color: var(--text-muted); font-size: 12px; font-weight: 600; }
+        .sensor-status { color: var(--accent-green); font-size: 11px; font-weight: 700; margin-top: 10px; }
+        .sensor-bar { height: 6px; background: rgba(255,255,255,.08); border-radius: 6px; overflow: hidden; margin-top: 12px; }
+        .sensor-bar-fill { height: 100%; background: var(--accent-blue); border-radius: inherit; transition: width .4s ease; }
+        .sensor-bar-fill.green { background: var(--accent-green); }
+        .sensor-bar-fill.orange { background: var(--accent-orange); }
+        .monitoring-card { background: linear-gradient(135deg, rgba(16,50,58,.98), rgba(11,32,41,.96)); padding: 30px; overflow: hidden; }
+        .monitoring-sensor-grid { grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .monitoring-sensor-grid .sensor-card { min-height: 190px; padding: 22px; position: relative; overflow: hidden; transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease; }
+        .monitoring-sensor-grid .sensor-card::after { content: ''; position: absolute; width: 90px; height: 90px; right: -35px; bottom: -40px; border-radius: 50%; background: rgba(83,199,235,.12); animation: sensorGlow 3s ease-in-out infinite; }
+        .monitoring-sensor-grid .sensor-card:hover { transform: translateY(-4px); border-color: rgba(123,228,149,.55); box-shadow: 0 12px 28px rgba(0,0,0,.25); }
+        .monitoring-sensor-grid .sensor-value { font-size: 31px; margin-top: 12px; }
+        .monitoring-sensor-grid .sensor-status { font-size: 12px; }
+        .live-signal { height: 8px; margin: 22px 0 6px; border-radius: 8px; background: repeating-linear-gradient(90deg, rgba(123,228,149,.15) 0 12px, rgba(123,228,149,.8) 12px 16px, rgba(123,228,149,.15) 16px 28px); background-size: 140px 100%; animation: signalMove 2.5s linear infinite; }
+        .live-signal-label { display: flex; justify-content: space-between; color: var(--text-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; }
+        @keyframes sensorGlow { 0%, 100% { transform: scale(.85); opacity: .45; } 50% { transform: scale(1.25); opacity: .85; } }
+        @keyframes signalMove { from { background-position: 0 0; } to { background-position: 140px 0; } }
+        .control-data-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        .control-data-card { background: rgba(11,32,41,.86); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; }
+        .control-data-card strong { display: block; color: var(--text-primary); font-size: 14px; }
+        .control-data-card p { color: var(--text-muted); font-size: 12px; margin: 6px 0 14px; }
+        .control-data-value { color: var(--accent-green); font-size: 14px; font-weight: 800; }
+
+        .stat-card { background: rgba(16,40,50,.9); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; display: flex; align-items: center; gap: 16px; box-shadow: var(--shadow-sm); }
+        .stat-icon { width: 56px; height: 56px; border-radius: 12px; display: grid; place-items: center; font-size: 25px; flex-shrink: 0; background: rgba(83,199,235,.12); color: var(--accent-blue); }
+
+        .custom-table { width: 100%; border-collapse: collapse; font-size: 15px; }
+        .custom-table th { text-align: left; padding: 14px 16px; color: var(--text-muted); font-size: 13px; font-weight: 700; text-transform: uppercase; border-bottom: 1px solid var(--border-color); }
+        .custom-table td { padding: 16px; border-bottom: 1px solid rgba(126,206,199,.12); font-weight: 500; }
+        
+        .badge { padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 700; display: inline-block; }
+        .badge-green { background: var(--accent-green-light); color: var(--accent-green); }
+        .badge-orange { background: var(--accent-orange-light); color: var(--accent-orange); }
+
+        .control-row { display: flex; justify-content: space-between; align-items: center; padding: 17px; border: 1px solid var(--border-color); border-radius: 10px; margin-bottom: 10px; background: #0b2029; font-size: 15px; }
+        .switch-btn { width: 58px; height: 32px; background: linear-gradient(135deg, #203943, #152a32); border: 1px solid rgba(138,168,170,.35); border-radius: 18px; position: relative; cursor: pointer; transition: background .25s ease, border-color .25s ease, box-shadow .25s ease; box-shadow: inset 0 2px 5px rgba(0,0,0,.3), 0 3px 8px rgba(0,0,0,.18); }
+        .switch-btn:before { content: ''; position: absolute; width: 22px; height: 22px; border-radius: 50%; top: 4px; left: 4px; background: linear-gradient(145deg, #f8fffd, #9cb8b5); box-shadow: 0 2px 5px rgba(0,0,0,.35); transition: transform .25s cubic-bezier(.4,0,.2,1), background .25s ease; }
+        .switch-btn:after { content: '×'; position: absolute; right: 9px; top: 5px; color: var(--text-muted); font-size: 17px; font-weight: 800; line-height: 20px; transition: opacity .2s ease; }
+        .switch-btn:hover { border-color: rgba(123,228,149,.65); transform: translateY(-1px); }
+        .switch-btn:focus-visible { outline: 2px solid var(--accent-blue); outline-offset: 3px; }
+        .switch-btn.active { background: linear-gradient(135deg, #4fbe76, #7be495); border-color: #9affb0; box-shadow: 0 0 14px rgba(123,228,149,.42), inset 0 2px 4px rgba(255,255,255,.2); }
+        .switch-btn.active:before { transform: translateX(26px); background: white; }
+        .switch-btn.active:after { content: '✓'; right: auto; left: 10px; color: #0c4a35; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0% { transform: scale(0.9); opacity: 0.7; } 50% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(0.9); opacity: 0.7; } }
+        .innovation-hero { background: linear-gradient(120deg, rgba(19,65,68,.98), rgba(16,40,50,.92) 58%, rgba(255,155,92,.14)); border: 1px solid rgba(123,228,149,.35); padding: 32px; position: relative; overflow: hidden; }
+        .innovation-hero::after { content: '◎'; position: absolute; right: 34px; top: 8px; color: rgba(123,228,149,.14); font-size: 150px; line-height: 1; }
+        .innovation-kicker { color: var(--accent-orange); font-size: 12px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; }
+        .innovation-hero h2 { max-width: 720px; font-size: 34px; line-height: 1.15; margin: 10px 0; position: relative; z-index: 1; }
+        .innovation-hero p { max-width: 680px; color: var(--text-muted); line-height: 1.7; margin: 0; position: relative; z-index: 1; }
+        .innovation-flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 22px; }
+        .innovation-step { background: rgba(11,32,41,.8); border: 1px solid var(--border-color); border-radius: 12px; padding: 22px 18px; min-height: 205px; position: relative; transition: transform .25s ease, border-color .25s ease; }
+        .innovation-step:hover { transform: translateY(-5px); border-color: rgba(123,228,149,.6); }
+        .innovation-step::after { content: '→'; position: absolute; right: -20px; top: 50%; color: var(--accent-green); font-size: 24px; font-weight: 800; z-index: 2; }
+        .innovation-step:last-child::after { display: none; }
+        .step-number { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; background: var(--accent-green-light); color: var(--accent-green); font-size: 16px; font-weight: 800; box-shadow: 0 0 16px rgba(123,228,149,.18); }
+        .innovation-step h3 { color: var(--text-primary); font-size: 16px; margin: 16px 0 8px; }
+        .innovation-step p { color: var(--text-muted); font-size: 12px; line-height: 1.6; margin: 0; }
+        .innovation-data { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 20px; }
+        .innovation-data-item { border-left: 3px solid var(--accent-blue); padding: 10px 14px; background: rgba(83,199,235,.06); }
+        .innovation-data-item strong { display: block; color: var(--text-primary); font-size: 20px; }
+        .innovation-data-item span { color: var(--text-muted); font-size: 11px; }
+
+        @media (max-width: 820px) {
+            .main-wrapper { margin-left: 0; padding: 24px 18px; }
+            .sidebar { width: 100%; height: auto; position: static; }
+            .grid-3, .grid-2-1, .sensor-grid, .control-data-grid, .monitoring-sensor-grid { grid-template-columns: 1fr; }
+            .monitoring-card { padding: 20px; }
+            .innovation-hero { padding: 24px; }
+            .innovation-hero h2 { font-size: 27px; }
+            .innovation-flow, .innovation-data { grid-template-columns: 1fr; }
+            .innovation-step::after { content: '↓'; right: auto; top: auto; bottom: -21px; left: 50%; }
+            .innovation-step:last-child::after { display: none; }
+            .sensor-card.wide { grid-column: span 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR NAVIGASI -->
+    <aside class="sidebar">
+        <div>
+            <div class="brand">
+                <div class="brand-icon">🌱</div>
+                <div>
+                    <div class="brand-title">Dashboard<br>Control System</div>
+                    <div class="brand-sub">SmartAquaponic IoT</div>
+                </div>
+            </div>
+
+            <nav class="nav-menu">
+                <a class="nav-item active" onclick="navigate('dashboard', this)"><span class="nav-icon">☖</span> Dashboard</a>
+                <a class="nav-item" onclick="navigate('inovasi', this)"><span class="nav-icon">✦</span> Cara Kerja Inovasi</a>
+                <a class="nav-item" onclick="navigate('pakan', this)"><span class="nav-icon">⊡</span> Pakan & Nutrisi</a>
+                <a class="nav-item" onclick="navigate('penjadwalan', this)"><span class="nav-icon">◷</span> Penjadwalan</a>
+                <a class="nav-item" onclick="navigate('riwayat', this)"><span class="nav-icon">≡</span> Riwayat Pembacaan</a>
+                <a class="nav-item" onclick="navigate('perangkat', this)"><span class="nav-icon">⚡</span> Kontrol Perangkat</a>
+                <a class="nav-item" onclick="navigate('pemantauan', this)"><span class="nav-icon">📈</span> Pemantauan Real-Time</a>
+                <a class="nav-item" onclick="navigate('notifikasi', this)"><span class="nav-icon">🔔</span> Notifikasi</a>
+                <a class="nav-item" onclick="navigate('pengaturan', this)"><span class="nav-icon">⚙</span> Pengaturan</a>
+            </nav>
+        </div>
+
+        <div class="sidebar-widgets">
+            <div class="widget-card">
+                <div class="widget-label">ESTIMASI STOK PAKAN</div>
+                <div class="widget-val">1.20 kg</div>
+                <div class="widget-status" style="color: var(--accent-green);">● Mode Hitungan Presisi</div>
+            </div>
+            <div class="widget-card">
+                <div class="widget-label">KOLAM AQUAPONIK</div>
+                <div class="widget-val">500 Ekor</div>
+                <div class="widget-status" style="color: var(--accent-blue);">Ikan Nila - Kolam A1</div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN WORKSPACE -->
+    <main class="main-wrapper">
+        <header>
+            <div>
+                <h1 class="page-title">Real Time Aquaponic Intelligence & Monitoring</h1>
+                <div class="page-desc">Informasi stok pakan dan status ekosistem aquaponik terpadu</div>
+            </div>
+
+            <div class="header-meta">
+                <div class="meta-box">
+                    <div class="meta-label">SERVER TIME</div>
+                    <div class="meta-value" id="clock">11:11:21</div>
+                </div>
+                <div class="user-badge">
+                    <div class="avatar">A</div>
+                    <div>
+                        <div style="font-size: 12px; font-weight: 700;">Admin Aquaponik</div>
+                        <div style="font-size: 10px; color: var(--text-muted);">Area Produksi 01</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- 1. DASHBOARD VIEW -->
+        <section id="dashboard" class="view-content active">
+            <div class="interactive-aquarium-card">
+                <div class="aquarium-header">
+                    <div class="aquarium-title">
+                        <span class="pulse-node"></span> VISUALISASI EKOSISTEM AQUAPONIK REAL-TIME
+                    </div>
+                    <span class="badge badge-green">SIRKULASI POMPA & AERATOR AKTIF</span>
+                </div>
+                <canvas id="aquaponicCanvas"></canvas>
+            </div>
+
+            <div class="grid-3" style="margin-bottom: 20px;">
+                <div class="stat-card">
+                    <div class="stat-icon">🌊</div>
+                    <div>
+                        <div class="widget-label">Suhu Air</div>
+                        <div style="font-size: 20px; font-weight: 800;">26.3 °C</div>
+                        <span class="badge badge-green">Kondisi Ideal</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="color: var(--accent-orange);">🧪</div>
+                    <div>
+                        <div class="widget-label">Kadar Nutrisi (TDS)</div>
+                        <div style="font-size: 20px; font-weight: 800;">320 PPM</div>
+                        <span class="badge badge-green">Subur</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="color: var(--accent-orange);">🌾</div>
+                    <div>
+                        <div class="widget-label">Sisa Pakan Hopper</div>
+                        <div style="font-size: 20px; font-weight: 800;">1.20 kg</div>
+                        <span class="badge badge-orange">80% Kapasitas (Hitungan)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="margin-bottom: 20px;">
+                <div class="card-head" style="margin-bottom: 8px;">
+                    <div>
+                        <div class="card-title-sm">RINGKASAN SENSOR</div>
+                        <h2 class="card-title">Data Pemantauan Kolam</h2>
+                        <p class="card-desc">Seluruh data sensor ditampilkan langsung di dashboard.</p>
+                    </div>
+                    <span class="badge badge-green">● LIVE</span>
+                </div>
+                <div class="sensor-grid" style="margin-top: 20px;">
+                    <div class="sensor-card">
+                        <div class="sensor-card-head"><span class="sensor-icon">☀️</span><span class="badge badge-green">NORMAL</span></div>
+                        <div class="sensor-name">Cahaya</div>
+                        <div class="sensor-value"><span id="dashboard-light-value">742</span> <span class="sensor-unit">lux</span></div>
+                        <div class="sensor-status">Intensitas cukup</div>
+                    </div>
+                    <div class="sensor-card">
+                        <div class="sensor-card-head"><span class="sensor-icon">💧</span><span class="badge badge-green">AMAN</span></div>
+                        <div class="sensor-name">Water Level</div>
+                        <div class="sensor-value"><span id="dashboard-water-value">78</span> <span class="sensor-unit">%</span></div>
+                        <div class="sensor-status">Ketinggian stabil</div>
+                    </div>
+                    <div class="sensor-card">
+                        <div class="sensor-card-head"><span class="sensor-icon">🌊</span><span class="badge badge-green">AKTIF</span></div>
+                        <div class="sensor-name">Flow Sensor</div>
+                        <div class="sensor-value"><span id="dashboard-flow-value">1.8</span> <span class="sensor-unit">L/min</span></div>
+                        <div class="sensor-status">Aliran berjalan</div>
+                    </div>
+                    <div class="sensor-card">
+                        <div class="sensor-card-head"><span class="sensor-icon">🧪</span><span class="badge badge-green">IDEAL</span></div>
+                        <div class="sensor-name">TDS</div>
+                        <div class="sensor-value"><span id="dashboard-tds-value">320</span> <span class="sensor-unit">ppm</span></div>
+                        <div class="sensor-status">Nutrisi ideal</div>
+                    </div>
+                    <div class="sensor-card">
+                        <div class="sensor-card-head"><span class="sensor-icon">🕒</span><span class="badge badge-green">SINKRON</span></div>
+                        <div class="sensor-name">RTC</div>
+                        <div class="sensor-value" style="font-family: monospace; font-size: 22px;"><span id="dashboard-rtc-value">--:--:--</span></div>
+                        <div class="sensor-status">Waktu tersinkronisasi</div>
+                    </div>
+                    <div class="sensor-card">
+                        <div class="sensor-card-head"><span class="sensor-icon">⚗️</span><span class="badge badge-green">IDEAL</span></div>
+                        <div class="sensor-name">pH Air</div>
+                        <div class="sensor-value"><span id="dashboard-ph-value">6.8</span> <span class="sensor-unit">pH</span></div>
+                        <div class="sensor-status">Air sesuai target</div>
+                    </div>
+                    <div class="sensor-card wide">
+                        <div class="sensor-card-head"><span class="sensor-icon">🌡️</span><span class="badge badge-green">NORMAL</span></div>
+                        <div class="sensor-name">Suhu & Kelembapan</div>
+                        <div class="sensor-value"><span id="dashboard-temperature-value">26.3</span> <span class="sensor-unit">°C</span> <span style="color: var(--border-color); margin: 0 8px;">|</span> <span id="dashboard-humidity-value">71</span> <span class="sensor-unit">% RH</span></div>
+                        <div class="sensor-status">Lingkungan stabil</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="margin-bottom: 20px;">
+                <div class="card-head" style="margin-bottom: 8px;">
+                    <div>
+                        <div class="card-title-sm">STATUS PERANGKAT</div>
+                        <h2 class="card-title">Ringkasan Kontrol Aquaponik</h2>
+                        <p class="card-desc">Status aktuator dan data operasional tanpa kontrol manual.</p>
+                    </div>
+                    <span class="badge badge-green">OTOMATIS</span>
+                </div>
+                <div class="control-data-grid" style="margin-top: 20px;">
+                    <div class="control-data-card"><strong>Pompa Air Utama</strong><p>Sirkulasi kolam dan filter bio</p><span class="control-data-value">● ON · 24 jam kontinu</span></div>
+                    <div class="control-data-card"><strong>Feeder Pakan Ikan</strong><p>Motor stepper dispenser pakan</p><span class="control-data-value" style="color: var(--accent-orange);">● STANDBY · 3 sesi/hari</span></div>
+                    <div class="control-data-card"><strong>Pompa Vitamin</strong><p>Pompa peristaltik nutrisi cair</p><span class="control-data-value" style="color: var(--accent-orange);">● STANDBY · 1 sesi/hari</span></div>
+                    <div class="control-data-card"><strong>Total Beban Daya</strong><p>Konsumsi daya seluruh perangkat</p><span class="control-data-value">18.5 Watt</span></div>
+                    <div class="control-data-card"><strong>Total Durasi Aktif</strong><p>Akumulasi operasional perangkat</p><span class="control-data-value">14.2 Jam</span></div>
+                    <div class="control-data-card"><strong>Mode Proteksi</strong><p>Perlindungan perangkat dari overheat</p><span class="control-data-value">AMAN · OTOMATIS</span></div>
+                </div>
+            </div>
+
+            <div class="card banner-card">
+                <div class="card-title-sm">SISTEM INTEGRASI ESP-NOW</div>
+                <h2 class="card-title">Status Ekosistem Aquaponik Real-Time</h2>
+                <p class="card-desc">Node pengontrol menghitung secara presisi durasi putaran motor dispenser untuk menentukan akumulasi pakan yang tersisa di dalam wadah secara sistematis.</p>
+            </div>
+        </section>
+
+        <!-- 2. CARA KERJA INOVASI -->
+        <section id="inovasi" class="view-content">
+            <div class="card innovation-hero">
+                <div class="innovation-kicker">SMART AQUAPONIC INTELLIGENCE</div>
+                <h2>Ekosistem yang bekerja dalam satu putaran cerdas.</h2>
+                <p>Inovasi ini menggabungkan kolam ikan, tanaman hidroponik, sensor, dan kontrol otomatis. Setiap pembacaan data membantu sistem menjaga air tetap stabil dan tanaman tetap produktif.</p>
+                <div class="innovation-data">
+                    <div class="innovation-data-item"><strong>7</strong><span>Sensor pemantauan aktif</span></div>
+                    <div class="innovation-data-item" style="border-color: var(--accent-green);"><strong>24/7</strong><span>Sirkulasi air berjalan</span></div>
+                    <div class="innovation-data-item" style="border-color: var(--accent-orange);"><strong>1 sistem</strong><span>Kontrol otomatis terpadu</span></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title-sm">ALUR KERJA SISTEM</div>
+                <h2 class="card-title">Dari ikan menjadi nutrisi untuk tanaman</h2>
+                <div class="innovation-flow">
+                    <div class="innovation-step"><div class="step-number">01</div><h3>Kolam ikan</h3><p>Ikan menghasilkan limbah organik yang menjadi sumber nutrisi alami di dalam air kolam.</p></div>
+                    <div class="innovation-step"><div class="step-number">02</div><h3>Filter biologis</h3><p>Bakteri baik mengolah limbah menjadi nutrisi yang lebih aman dan siap diserap tanaman.</p></div>
+                    <div class="innovation-step"><div class="step-number">03</div><h3>Tanaman hidroponik</h3><p>Akar tanaman menyerap nutrisi sekaligus membantu menyaring air sebelum kembali ke kolam.</p></div>
+                    <div class="innovation-step"><div class="step-number">04</div><h3>Sensor & kontrol</h3><p>Sensor membaca kondisi sistem, lalu kontroler mengatur pompa, pakan, dan vitamin sesuai kebutuhan.</p></div>
+                </div>
+            </div>
+
+            <div class="card banner-card">
+                <div class="card-title-sm">INTI INOVASI</div>
+                <h2 class="card-title">Hemat air, terukur, dan minim intervensi manual.</h2>
+                <p class="card-desc">Data cahaya, water level, flow, TDS, RTC, pH, suhu, dan kelembapan menjadi dasar pengambilan keputusan sistem aquaponik secara real-time.</p>
+            </div>
+        </section>
+
+        <!-- 3. PAKAN & NUTRISI -->
+        <section id="pakan" class="view-content">
+            <div class="card-title-sm" style="font-size: 14px; margin-bottom: 12px; color: var(--accent-orange);">1. MANAGEMENT STOK PAKAN IKAN</div>
+            <div class="grid-3" style="margin-bottom: 20px;">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(255,155,92,.12); color: var(--accent-orange);">📦</div>
+                    <div>
+                        <div class="widget-label">Kapasitas Maksimal Hopper</div>
+                        <div style="font-size: 22px; font-weight: 800; color: var(--text-primary);">1.50 kg</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">Batas tampung wadah pakan</div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(83,199,235,.12); color: var(--accent-blue);">🧮</div>
+                    <div>
+                        <div class="widget-label">Sisa Pakan (Kalkulasi)</div>
+                        <div style="font-size: 22px; font-weight: 800; color: var(--text-primary);">1.20 kg</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">Kapasitas awal - Total pengeluaran</div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(123,228,149,.13); color: var(--accent-green);">📊</div>
+                    <div>
+                        <div class="widget-label">Persentase Volume Pakan</div>
+                        <div style="font-size: 22px; font-weight: 800; color: var(--accent-green);">80%</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">Stok pakan terhitung aman</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid-2-1" style="margin-bottom: 30px;">
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <div class="card-title-sm">FEED INTELLIGENCE (ALGORITMA TAKARAN)</div>
+                        <span class="badge badge-green">● CALCULATED</span>
+                    </div>
+                    <h3 class="card-title">Kondisi Hopper Saat Ini</h3>
+                    <p class="card-desc">Estimasi level pakan berdasarkan rumus akumulasi pengeluaran motor stepper (1 detik = 10 gram).</p>
+
+                    <div style="margin: 28px 0 10px;">
+                        <div style="height: 14px; background: rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden; position: relative;">
+                            <div style="width: 80%; height: 100%; background: linear-gradient(90deg, #ff9b5c, #7be495); border-radius: 10px;"></div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; color: var(--text-muted); margin-top: 8px;">
+                            <span style="color: var(--accent-green); font-size: 16px;">80% (Sisa 1.20 kg)</span>
+                            <span>Kapasitas: 1.500 g</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div class="card-title-sm">SMART FEEDER</div>
+                        <h3 class="card-title">Aksi Otomatis Pakan</h3>
+                        <p class="card-desc" style="font-size: 12px; margin-top: 8px;">Sisa pakan mencukupi untuk 4-5 hari kedepan.</p>
+                    </div>
+
+                    <div style="margin-top: 15px;">
+                        <button style="width: 100%; padding: 12px; background: rgba(83,199,235,.15); border: 1px solid var(--accent-blue); color: var(--accent-blue); font-weight: 700; border-radius: 8px; cursor: pointer;">
+                            🔄 Reset Stok Pakan Penuh (1.50 kg)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-title-sm" style="font-size: 14px; margin-bottom: 12px; color: var(--accent-blue);">2. MANAGEMENT DOSIS VITAMIN & NUTRISI CAIR</div>
+            <div class="grid-3" style="margin-bottom: 20px;">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(83,199,235,.12); color: var(--accent-blue);">🧪</div>
+                    <div>
+                        <div class="widget-label">Kapasitas Tangki Vitamin</div>
+                        <div style="font-size: 22px; font-weight: 800; color: var(--text-primary);">500 mL</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">Batas tampung botol dosis</div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(123,228,149,.13); color: var(--accent-green);">💧</div>
+                    <div>
+                        <div class="widget-label">Sisa Vitamin (Kalkulasi)</div>
+                        <div style="font-size: 22px; font-weight: 800; color: var(--text-primary);">350 mL</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">Kapasitas awal - Dosis terpompa</div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(255,155,92,.12); color: var(--accent-orange);">⚖️</div>
+                    <div>
+                        <div class="widget-label">Persentase Volume Vitamin</div>
+                        <div style="font-size: 22px; font-weight: 800; color: var(--accent-blue);">70%</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">Tersisa ±14 kali dosis</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid-2-1" style="margin-bottom: 20px;">
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <div class="card-title-sm">DOSING INTELLIGENCE (POMPA PERISTALTIK)</div>
+                        <span class="badge badge-green">● READY</span>
+                    </div>
+                    <h3 class="card-title">Kondisi Tangki Vitamin Liquid</h3>
+                    <p class="card-desc">Estimasi sisa cairan berdasarkan durasi aktif Pompa Peristaltik (1 detik = 5 mL).</p>
+
+                    <div style="margin: 28px 0 10px;">
+                        <div style="height: 14px; background: rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden; position: relative;">
+                            <div style="width: 70%; height: 100%; background: linear-gradient(90deg, #53c7eb, #7be495); border-radius: 10px;"></div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; color: var(--text-muted); margin-top: 8px;">
+                            <span style="color: var(--accent-blue); font-size: 16px;">70% (Sisa 350 mL)</span>
+                            <span>Kapasitas: 500 mL</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div class="card-title-sm">DOSER SYSTEM</div>
+                        <h3 class="card-title">Aksi Otomatis Vitamin</h3>
+                        <p class="card-desc" style="font-size: 12px; margin-top: 8px;">Injeksi vitamin otomatis dijadwalkan setiap 2 hari sekali.</p>
+                    </div>
+
+                    <div style="margin-top: 15px;">
+                        <button style="width: 100%; padding: 12px; background: rgba(123,228,149,.15); border: 1px solid var(--accent-green); color: var(--accent-green); font-weight: 700; border-radius: 8px; cursor: pointer;">
+                            🧪 Refill / Reset Vitamin Penuh (500 mL)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. PENJADWALAN -->
+        <section id="penjadwalan" class="view-content">
+            <div class="card banner-card" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div>
+                    <div class="card-title-sm">SMART FEED SCHEDULER</div>
+                    <h2 class="card-title">Jadwal Pemberian Pakan & Injeksi Vitamin</h2>
+                    <p class="card-desc">Rencana pemberian pakan terstruktur dengan indikator sesi berikutnya, status jadwal, dan estimasi waktu menuju sesi selanjutnya.</p>
+                </div>
+                <div style="background: rgba(11,32,41,0.8); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px 28px; text-align: center; min-width: 140px;">
+                    <div style="font-size: 32px; font-weight: 800; color: var(--text-primary); line-height: 1;">3</div>
+                    <div style="font-size: 11px; color: var(--text-muted); font-weight: 600; margin-top: 4px;">jadwal aktif hari ini</div>
+                </div>
+            </div>
+
+            <div class="grid-2-1" style="margin-bottom: 20px;">
+                <div class="card" style="margin-bottom: 0;">
+                    <div class="card-head">
+                        <div>
+                            <div class="card-title-sm">DAILY FEED & VITAMIN PLAN</div>
+                            <h3 class="card-title">Sesi Pemberian Hari Ini</h3>
+                            <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Status sesi dihitung otomatis berdasarkan waktu sistem.</div>
+                        </div>
+                        <span class="badge badge-green">● LIVE</span>
+                    </div>
+
+                    <div class="control-row" style="background: rgba(11,32,41,0.6); margin-bottom: 12px;">
+                        <div style="display: flex; align-items: center; gap: 20px;">
+                            <div style="text-align: center; min-width: 60px;">
+                                <strong style="font-size: 18px; color: var(--text-primary); display: block;">06:00</strong>
+                                <span style="font-size: 10px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Pagi</span>
+                            </div>
+                            <div>
+                                <strong style="font-size: 15px; color: var(--text-primary); display: block;">Pemberian Pakan Pagi + Injeksi Vitamin</strong>
+                                <span style="font-size: 12px; color: var(--text-muted);">Pakan 150g · Vitamin Liquid 25mL</span>
+                            </div>
+                        </div>
+                        <span class="badge badge-green">Selesai</span>
+                    </div>
+
+                    <div class="control-row" style="background: rgba(11,32,41,0.6); margin-bottom: 12px; border-color: rgba(83,199,235,0.4);">
+                        <div style="display: flex; align-items: center; gap: 20px;">
+                            <div style="text-align: center; min-width: 60px;">
+                                <strong style="font-size: 18px; color: var(--accent-blue); display: block;">12:00</strong>
+                                <span style="font-size: 10px; font-weight: 800; color: var(--accent-blue); text-transform: uppercase;">Siang</span>
+                            </div>
+                            <div>
+                                <strong style="font-size: 15px; color: var(--text-primary); display: block;">Pemberian Pakan Siang</strong>
+                                <span style="font-size: 12px; color: var(--text-muted);">Takaran target 150g (0.15 kg) · Motor Stepper</span>
+                            </div>
+                        </div>
+                        <span class="badge badge-orange">Menunggu</span>
+                    </div>
+
+                    <div class="control-row" style="background: rgba(11,32,41,0.6); margin-bottom: 0;">
+                        <div style="display: flex; align-items: center; gap: 20px;">
+                            <div style="text-align: center; min-width: 60px;">
+                                <strong style="font-size: 18px; color: var(--text-primary); display: block;">18:00</strong>
+                                <span style="font-size: 10px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Sore</span>
+                            </div>
+                            <div>
+                                <strong style="font-size: 15px; color: var(--text-primary); display: block;">Pemberian Pakan Sore</strong>
+                                <span style="font-size: 12px; color: var(--text-muted);">Takaran target 150g (0.15 kg) · Motor Stepper</span>
+                            </div>
+                        </div>
+                        <span class="badge badge-orange">Menunggu</span>
+                    </div>
+                </div>
+
+                <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; margin-bottom: 0;">
+                    <div>
+                        <div class="card-title-sm">NEXT SESSION</div>
+                        <h3 class="card-title">Sesi pemberian berikutnya</h3>
+                        
+                        <div style="font-size: 42px; font-weight: 800; color: var(--text-primary); margin: 16px 0 4px; font-family: monospace; letter-spacing: -1px;" id="countdown-timer">00:48:39</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">Waktu tersisa menuju sesi pemberian pakan siang.</div>
+
+                        <div style="height: 6px; background: rgba(255,255,255,0.1); border-radius: 4px; margin-top: 16px; overflow: hidden;">
+                            <div style="width: 82%; height: 100%; background: var(--accent-blue); border-radius: 4px;"></div>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px;">
+                        <div style="background: #0b2029; border: 1px solid var(--border-color); border-radius: 10px; padding: 12px;">
+                            <div style="font-size: 10px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Waktu sistem</div>
+                            <div style="font-size: 14px; font-weight: 700; color: var(--text-primary); margin-top: 4px; font-family: monospace;">11:11:21</div>
+                        </div>
+                        <div style="background: #0b2029; border: 1px solid var(--border-color); border-radius: 10px; padding: 12px;">
+                            <div style="font-size: 10px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Total sesi</div>
+                            <div style="font-size: 14px; font-weight: 700; color: var(--text-primary); margin-top: 4px;">3 / hari</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. RIWAYAT PEMBACAAN -->
+        <section id="riwayat" class="view-content">
+            <div class="card">
+                <div class="card-head" style="margin-bottom: 20px;">
+                    <div>
+                        <h3 class="card-title" style="font-size: 22px;">Riwayat Monitoring Database</h3>
+                        <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Log histori pembacaan sensor air, sisa pakan, dan dosis vitamin.</div>
+                    </div>
+                </div>
+
+                <table class="custom-table">
+                    <thead>
+                        <tr style="background: rgba(11, 32, 41, 0.4);">
+                            <th style="padding: 16px 20px; width: 30%;">Waktu</th>
+                            <th style="padding: 16px 20px; width: 25%;">Parameter / Berat</th>
+                            <th style="padding: 16px 20px; width: 25%;">Nilai</th>
+                            <th style="padding: 16px 20px; width: 20%;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="padding: 16px 20px; color: var(--text-muted); font-family: monospace;">2026-08-13 13:57:13</td>
+                            <td style="padding: 16px 20px; font-weight: 700; color: var(--text-primary);">TDS Nutrisi Air</td>
+                            <td style="padding: 16px 20px; font-weight: 700; color: var(--accent-blue);">320 PPM</td>
+                            <td style="padding: 16px 20px;"><span class="badge badge-green">Subur</span></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 16px 20px; color: var(--text-muted); font-family: monospace;">2026-08-13 13:57:12</td>
+                            <td style="padding: 16px 20px; font-weight: 700; color: var(--text-primary);">Suhu Air Kolam</td>
+                            <td style="padding: 16px 20px; font-weight: 700; color: var(--accent-green);">26.3 °C</td>
+                            <td style="padding: 16px 20px;"><span class="badge badge-green">Normal</span></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 16px 20px; color: var(--text-muted); font-family: monospace;">2026-08-13 13:57:11</td>
+                            <td style="padding: 16px 20px; font-weight: 700; color: var(--text-primary);">Stok Vitamin Liquid</td>
+                            <td style="padding: 16px 20px; font-weight: 700; color: var(--accent-blue);">350 mL</td>
+                            <td style="padding: 16px 20px;"><span class="badge badge-green">Aman</span></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 16px 20px; color: var(--text-muted); font-family: monospace;">2026-08-13 13:57:10</td>
+                            <td style="padding: 16px 20px; font-weight: 700; color: var(--text-primary);">Berat Pakan</td>
+                            <td style="padding: 16px 20px; font-weight: 700; color: var(--text-primary);">82.4 g</td>
+                            <td style="padding: 16px 20px;"><span class="badge badge-orange">Pakan Menipis</span></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 16px 20px; color: var(--text-muted); font-family: monospace;">2026-08-13 13:57:09</td>
+                            <td style="padding: 16px 20px; font-weight: 700; color: var(--text-primary);">Berat Pakan</td>
+                            <td style="padding: 16px 20px; font-weight: 700; color: var(--text-primary);">0.0 g</td>
+                            <td style="padding: 16px 20px;"><span class="badge" style="background: rgba(255, 99, 132, 0.15); color: #ff6b81;">Pakan Habis</span></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 16px 20px; color: var(--text-muted); font-family: monospace;">2026-08-13 13:57:01</td>
+                            <td style="padding: 16px 20px; font-weight: 700; color: var(--text-primary);">Berat Pakan</td>
+                            <td style="padding: 16px 20px; font-weight: 700; color: var(--text-primary);">808.2 g</td>
+                            <td style="padding: 16px 20px;"><span class="badge badge-green">Pakan Normal</span></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 16px 20px; color: var(--text-muted); font-family: monospace;">2026-08-13 13:56:59</td>
+                            <td style="padding: 16px 20px; font-weight: 700; color: var(--text-primary);">Berat Pakan</td>
+                            <td style="padding: 16px 20px; font-weight: 700; color: var(--text-primary);">335.8 g</td>
+                            <td style="padding: 16px 20px;"><span class="badge badge-green">Pakan Normal</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 5. KONTROL PERANGKAT -->
+        <section id="perangkat" class="view-content">
+            <div class="card banner-card" style="margin-bottom: 20px;">
+                <div class="card-title-sm">ACTUATOR CONTROL CENTER</div>
+                <h2 class="card-title">Kontrol & Analisis Operasional Perangkat</h2>
+                <p class="card-desc">Pusat kendali manual aktuator ekosistem aquaponik dilengkapi dengan pemantauan durasi kerja dan grafik beban aktivitas perangkat secara real-time.</p>
+            </div>
+
+            <div class="grid-3" style="margin-bottom: 20px;">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(123,228,149,.13); color: var(--accent-green);">⚡</div>
+                    <div>
+                        <div class="widget-label">Total Beban Daya</div>
+                        <div style="font-size: 22px; font-weight: 800; color: var(--text-primary);">18.5 Watt</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">Sistem dalam batas hemat energi</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(83,199,235,.12); color: var(--accent-blue);">⏱️</div>
+                    <div>
+                        <div class="widget-label">Total Durasi Aktif</div>
+                        <div style="font-size: 22px; font-weight: 800; color: var(--text-primary);">14.2 Jam</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">Sirkulasi berjalan optimal</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(255,155,92,.12); color: var(--accent-orange);">🛡️</div>
+                    <div>
+                        <div class="widget-label">Mode Proteksi</div>
+                        <div style="font-size: 22px; font-weight: 800; color: var(--accent-green);">OTOMATIS</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">Sistem aman dari overheat</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="margin-bottom: 20px;">
+                <div class="card-head" style="margin-bottom: 12px;">
+                    <div>
+                        <div class="card-title-sm">ACTIVATION TIMELINE (24 HARI INI)</div>
+                        <h3 class="card-title">Grafik Intensitas Operasional Perangkat</h3>
+                        <p class="card-desc">Visualisasi interval waktu aktif/non-aktif aktuator untuk memantau ritme kerja komponen fisik.</p>
+                    </div>
+                    <span class="badge badge-green">● Monitoring Aktif</span>
+                </div>
+
+                <div style="background: #0b2029; border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; margin-top: 15px;">
+                    <div style="margin-bottom: 16px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-bottom: 6px;">
+                            <span style="color: var(--accent-blue);">🌊 Pompa Utama Air Kolam</span>
+                            <span style="color: var(--accent-green);">Durasi: 24 Jam (Kontinu)</span>
+                        </div>
+                        <div style="height: 12px; background: rgba(255,255,255,0.05); border-radius: 6px; overflow: hidden; display: flex;">
+                            <div style="width: 100%; background: var(--accent-blue); opacity: 0.85;" title="Aktif 100%"></div>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 16px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-bottom: 6px;">
+                            <span style="color: var(--accent-orange);">🌾 Feeder Pakan Ikan (Stepper)</span>
+                            <span style="color: var(--accent-orange);">3x Injeksi / Hari (Total 45 Detik)</span>
+                        </div>
+                        <div style="height: 12px; background: rgba(255,255,255,0.05); border-radius: 6px; overflow: hidden; display: flex; gap: 2px;">
+                            <div style="width: 25%; background: transparent;"></div>
+                            <div style="width: 3%; background: var(--accent-orange);" title="Sesi Pagi (06:00)"></div>
+                            <div style="width: 22%; background: transparent;"></div>
+                            <div style="width: 3%; background: var(--accent-orange);" title="Sesi Siang (12:00)"></div>
+                            <div style="width: 22%; background: transparent;"></div>
+                            <div style="width: 3%; background: var(--accent-orange);" title="Sesi Sore (18:00)"></div>
+                            <div style="width: 22%; background: transparent;"></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-bottom: 6px;">
+                            <span style="color: var(--accent-green);">🧪 Pompa Dosis Vitamin (Peristaltic)</span>
+                            <span style="color: var(--accent-green);">1x Injeksi / Hari (Total 5 Detik)</span>
+                        </div>
+                        <div style="height: 12px; background: rgba(255,255,255,0.05); border-radius: 6px; overflow: hidden; display: flex;">
+                            <div style="width: 25%; background: transparent;"></div>
+                            <div style="width: 2%; background: var(--accent-green);" title="Injeksi Vitamin (06:00)"></div>
+                            <div style="width: 73%; background: transparent;"></div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; font-size: 10px; color: var(--text-muted); margin-top: 10px; font-family: monospace;">
+                        <span>00:00</span>
+                        <span>04:00</span>
+                        <span>08:00</span>
+                        <span>12:00</span>
+                        <span>16:00</span>
+                        <span>20:00</span>
+                        <span>24:00</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-head" style="margin-bottom: 16px;">
+                    <div>
+                        <div class="card-title-sm">MANUAL OVERRIDE SWITCHES</div>
+                        <h3 class="card-title">Pengendalian Aktuator Manual</h3>
+                        <p class="card-desc">Gunakan sakelar di bawah untuk menguji atau mengoperasikan aktuator secara terpisah di luar jadwal otomatis.</p>
+                    </div>
+                </div>
+
+                <div class="control-row">
+                    <div style="display: flex; align-items: center; gap: 16px;">
+                        <div style="width: 42px; height: 42px; background: rgba(83,199,235,.12); border-radius: 10px; display: grid; place-items: center; font-size: 20px; color: var(--accent-blue);">💧</div>
+                        <div>
+                            <strong style="font-size: 16px; color: var(--text-primary);">Pompa Air Utama (Sirkulasi Aquaponik)</strong>
+                            <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Mengalirkan air dari kolam ikan ke bed tanaman hidroponik & filter bio.</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 14px;">
+                        <span class="badge badge-green">ON</span>
+                        <button class="switch-btn active" onclick="this.classList.toggle('active')"></button>
+                    </div>
+                </div>
+
+                <div class="control-row">
+                    <div style="display: flex; align-items: center; gap: 16px;">
+                        <div style="width: 42px; height: 42px; background: rgba(255,155,92,.12); border-radius: 10px; display: grid; place-items: center; font-size: 20px; color: var(--accent-orange);">⚙️</div>
+                        <div>
+                            <strong style="font-size: 16px; color: var(--text-primary);">Feeder Pakan Ikan (Dispenser Motor Stepper)</strong>
+                            <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Memutar ulir pembuang pakan. Pengujian manual akan otomatis memotong kalkulasi stok pakan.</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 14px;">
+                        <span class="badge badge-orange">STANDBY</span>
+                        <button class="switch-btn" onclick="this.classList.toggle('active')"></button>
+                    </div>
+                </div>
+
+                <div class="control-row">
+                    <div style="display: flex; align-items: center; gap: 16px;">
+                        <div style="width: 42px; height: 42px; background: rgba(123,228,149,.13); border-radius: 10px; display: grid; place-items: center; font-size: 20px; color: var(--accent-green);">🧪</div>
+                        <div>
+                            <strong style="font-size: 16px; color: var(--text-primary);">Pompa Dosis Vitamin (Pompa Peristaltic)</strong>
+                            <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Injeksi mikro nutrisi/vitamin cair ke dalam air. Pengujian manual mengartikan pengurangan volume mL.</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 14px;">
+                        <span class="badge badge-orange">STANDBY</span>
+                        <button class="switch-btn" onclick="this.classList.toggle('active')"></button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6. PEMANTAUAN REAL-TIME -->
+        <section id="pemantauan" class="view-content">
+            <div class="card monitoring-card">
+                <div class="card-head" style="margin-bottom: 8px;">
+                    <div>
+                        <div class="card-title-sm">LIVE MONITORING</div>
+                        <h2 class="card-title">Data Sensor Ekosistem</h2>
+                        <p class="card-desc">Pemantauan 7 sensor aquaponik secara berkelanjutan.</p>
+                    </div>
+                    <span class="badge badge-green">● TERHUBUNG</span>
+                </div>
+                <div class="live-signal"></div>
+                <div class="live-signal-label"><span>Aliran data sensor aktif</span><span>Pembaruan setiap 3 detik</span></div>
+                <div class="sensor-grid monitoring-sensor-grid" style="margin-top: 22px;">
+                    <div class="sensor-card">
+                        <div class="sensor-card-head"><span class="sensor-icon">☀️</span><span class="badge badge-green">NORMAL</span></div>
+                        <div class="sensor-name">Sensor Cahaya</div>
+                        <div class="sensor-value"><span id="light-value">742</span> <span class="sensor-unit">lux</span></div>
+                        <div class="sensor-bar"><div id="light-bar" class="sensor-bar-fill orange" style="width: 74%;"></div></div>
+                        <div class="sensor-status">Intensitas cukup untuk tanaman</div>
+                    </div>
+                    <div class="sensor-card">
+                        <div class="sensor-card-head"><span class="sensor-icon">💧</span><span class="badge badge-green">AMAN</span></div>
+                        <div class="sensor-name">Sensor Water Level</div>
+                        <div class="sensor-value"><span id="water-value">78</span> <span class="sensor-unit">%</span></div>
+                        <div class="sensor-bar"><div id="water-bar" class="sensor-bar-fill" style="width: 78%;"></div></div>
+                        <div class="sensor-status">Ketinggian air stabil</div>
+                    </div>
+                    <div class="sensor-card">
+                        <div class="sensor-card-head"><span class="sensor-icon">🌊</span><span class="badge badge-green">AKTIF</span></div>
+                        <div class="sensor-name">Flow Sensor</div>
+                        <div class="sensor-value"><span id="flow-value">1.8</span> <span class="sensor-unit">L/min</span></div>
+                        <div class="sensor-status">Aliran pompa berjalan</div>
+                    </div>
+                    <div class="sensor-card">
+                        <div class="sensor-card-head"><span class="sensor-icon">🧪</span><span class="badge badge-green">IDEAL</span></div>
+                        <div class="sensor-name">Sensor TDS</div>
+                        <div class="sensor-value"><span id="tds-value">320</span> <span class="sensor-unit">ppm</span></div>
+                        <div class="sensor-status">Nutrisi air dalam batas ideal</div>
+                    </div>
+                    <div class="sensor-card">
+                        <div class="sensor-card-head"><span class="sensor-icon">🕒</span><span class="badge badge-green">SINKRON</span></div>
+                        <div class="sensor-name">Sensor RTC</div>
+                        <div class="sensor-value" style="font-family: monospace; font-size: 22px;"><span id="rtc-value">--:--:--</span></div>
+                        <div class="sensor-status">Waktu sistem tersinkronisasi</div>
+                    </div>
+                    <div class="sensor-card">
+                        <div class="sensor-card-head"><span class="sensor-icon">⚗️</span><span class="badge badge-green">IDEAL</span></div>
+                        <div class="sensor-name">Sensor pH</div>
+                        <div class="sensor-value"><span id="ph-value">6.8</span> <span class="sensor-unit">pH</span></div>
+                        <div class="sensor-status">Kondisi air sesuai target</div>
+                    </div>
+                    <div class="sensor-card wide">
+                        <div class="sensor-card-head"><span class="sensor-icon">🌡️</span><span class="badge badge-green">NORMAL</span></div>
+                        <div class="sensor-name">Sensor Suhu & Kelembapan</div>
+                        <div class="sensor-value"><span id="temperature-value">26.3</span> <span class="sensor-unit">°C</span> <span style="color: var(--border-color); margin: 0 8px;">|</span> <span id="humidity-value">71</span> <span class="sensor-unit">% RH</span></div>
+                        <div class="sensor-status">Lingkungan kolam dan tanaman stabil</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 7. NOTIFIKASI -->
+        <section id="notifikasi" class="view-content">
+            <div class="card">
+                <div class="card-title-sm">SYSTEM ALERTS</div>
+                <h2 class="card-title">Pusat Notifikasi</h2>
+                <div style="margin-top: 16px;">
+                    <div class="control-row">
+                        <div>
+                            <strong>Pemberian Pakan & Vitamin Otomatis Berhasil</strong>
+                            <div style="font-size: 12px; color: var(--text-muted);">Pukul 06:00 WIB - 150g pakan & 25mL vitamin telah diberikan.</div>
+                        </div>
+                        <span class="badge badge-green">Info</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 8. PENGATURAN -->
+        <section id="pengaturan" class="view-content">
+            <div class="card">
+                <div class="card-title-sm">SYSTEM CONFIGURATION</div>
+                <h2 class="card-title">Pengaturan Kapasitas & Sistem</h2>
+                <p class="card-desc">Atur kapasitas wadah pakan dan botol dosis vitamin di sini.</p>
+                <div style="margin-top: 16px;">
+                    <div class="control-row">
+                        <div>
+                            <strong>Kapasitas Wadah Pakan (Kg)</strong>
+                            <div style="font-size: 12px; color: var(--text-muted);">Batas maksimum daya tampung tempat pakan (Hopper)</div>
+                        </div>
+                        <input type="number" value="1.5" step="0.1" style="background: #102832; border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: 6px; width: 80px; text-align: center; font-weight: 700;">
+                    </div>
+                    <div class="control-row">
+                        <div>
+                            <strong>Kapasitas Botol Vitamin (mL)</strong>
+                            <div style="font-size: 12px; color: var(--text-muted);">Batas maksimum daya tampung cairan dosis vitamin</div>
+                        </div>
+                        <input type="number" value="500" step="10" style="background: #102832; border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: 6px; width: 80px; text-align: center; font-weight: 700;">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- JAVASCRIPT NAVIGASI, CLOCK & ANIMASI -->
+    <script>
+        function navigate(viewId, element) {
+            const views = document.querySelectorAll('.view-content');
+            views.forEach(v => v.classList.remove('active'));
+
+            const selectedView = document.getElementById(viewId);
+            if (selectedView) {
+                selectedView.classList.add('active');
+            }
+
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(n => n.classList.remove('active'));
+            element.classList.add('active');
+        }
+
+        function updateClock() {
+            const now = new Date();
+            const hrs = String(now.getHours()).padStart(2, '0');
+            const mins = String(now.getMinutes()).padStart(2, '0');
+            const secs = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('clock').textContent = `${hrs}:${mins}:${secs}`;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        function updateSensorReadings() {
+            const now = new Date();
+            const rtcValue = now.toLocaleTimeString('id-ID', { hour12: false });
+            document.getElementById('rtc-value').textContent = rtcValue;
+            document.getElementById('dashboard-rtc-value').textContent = rtcValue;
+            const light = Math.round(720 + Math.random() * 45);
+            const water = Math.round(76 + Math.random() * 5);
+            const tds = Math.round(315 + Math.random() * 12);
+            const ph = (6.7 + Math.random() * 0.2).toFixed(1);
+            const temperature = (26.1 + Math.random() * 0.5).toFixed(1);
+            const humidity = Math.round(69 + Math.random() * 5);
+
+            document.getElementById('light-value').textContent = light;
+            document.getElementById('light-bar').style.width = `${Math.min(light / 10, 100)}%`;
+            document.getElementById('dashboard-light-value').textContent = light;
+            document.getElementById('water-value').textContent = water;
+            document.getElementById('water-bar').style.width = `${water}%`;
+            document.getElementById('dashboard-water-value').textContent = water;
+            const flow = (1.7 + Math.random() * 0.3).toFixed(1);
+            document.getElementById('flow-value').textContent = flow;
+            document.getElementById('dashboard-flow-value').textContent = flow;
+            document.getElementById('tds-value').textContent = tds;
+            document.getElementById('dashboard-tds-value').textContent = tds;
+            document.getElementById('ph-value').textContent = ph;
+            document.getElementById('dashboard-ph-value').textContent = ph;
+            document.getElementById('temperature-value').textContent = temperature;
+            document.getElementById('dashboard-temperature-value').textContent = temperature;
+            document.getElementById('humidity-value').textContent = humidity;
+            document.getElementById('dashboard-humidity-value').textContent = humidity;
+        }
+        updateSensorReadings();
+        setInterval(updateSensorReadings, 3000);
+
+        // Canvas Animasi Ekosistem
+        const canvas = document.getElementById('aquaponicCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            if (canvas) {
+                canvas.width = canvas.offsetWidth;
+                canvas.height = canvas.offsetHeight;
+            }
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        const bubbles = [];
+        for(let i = 0; i < 20; i++) {
+            bubbles.push({
+                x: Math.random() * (canvas.width || 600),
+                y: 120 + Math.random() * 80,
+                radius: Math.random() * 2.5 + 1,
+                speed: Math.random() * 1.2 + 0.5,
+                opacity: Math.random() * 0.5 + 0.3
+            });
+        }
+
+        const fishes = [
+            { x: 60, y: 140, speed: 1.1, size: 16, color: '#ff9b5c', tailAngle: 0 },
+            { x: 220, y: 170, speed: -0.8, size: 20, color: '#ffb380', tailAngle: 0 },
+            { x: 400, y: 150, speed: 1.3, size: 14, color: '#53c7eb', tailAngle: 0 }
+        ];
+
+        let waveOffset = 0;
+
+        function drawPlant(x, y, scale) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.scale(scale, scale);
+
+            ctx.strokeStyle = '#5bbd72';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(0, -25);
+            ctx.stroke();
+
+            ctx.fillStyle = '#7be495';
+            ctx.beginPath();
+            ctx.ellipse(-10, -20, 12, 6, -Math.PI / 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.ellipse(10, -20, 12, 6, Math.PI / 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.ellipse(0, -32, 14, 7, -Math.PI / 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function drawAquaponicSystem() {
+            if (!canvas || !ctx) return;
+
+            const w = canvas.width;
+            const h = canvas.height;
+
+            ctx.clearRect(0, 0, w, h);
+
+            ctx.fillStyle = "#102832";
+            ctx.strokeStyle = "rgba(126,206,199,0.3)";
+            ctx.lineWidth = 2;
+            ctx.fillRect(20, 15, w - 40, 75);
+            ctx.strokeRect(20, 15, w - 40, 75);
+
+            const plantCount = Math.floor((w - 60) / 70);
+            const plantLevels = 5;
+            const levelHeight = 15;
+            for (let level = 0; level < plantLevels; level++) {
+                const levelY = 28 + level * levelHeight;
+
+                ctx.strokeStyle = "rgba(123,228,149,0.3)";
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(25, levelY + 3);
+                ctx.lineTo(w - 25, levelY + 3);
+                ctx.stroke();
+
+                for (let i = 0; i < plantCount; i++) {
+                    const offset = level % 2 ? 35 : 0;
+                    drawPlant(50 + i * 70 + offset, levelY, 0.55);
+                }
+            }
+
+            waveOffset += 0.05;
+            ctx.strokeStyle = "rgba(83, 199, 235, 0.6)";
+            ctx.lineWidth = 4;
+            ctx.setLineDash([6, 4]);
+            ctx.beginPath();
+            ctx.moveTo(w - 35, 50);
+            ctx.lineTo(w - 35, 90);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            const tankTop = 90;
+            ctx.fillStyle = "rgba(83, 199, 235, 0.12)";
+            ctx.fillRect(20, tankTop, w - 40, h - tankTop - 15);
+            ctx.strokeStyle = "rgba(126,206,199,0.3)";
+            ctx.strokeRect(20, tankTop, w - 40, h - tankTop - 15);
+
+            ctx.beginPath();
+            ctx.strokeStyle = "rgba(83, 199, 235, 0.5)";
+            ctx.lineWidth = 2;
+            for (let x = 20; x <= w - 20; x += 10) {
+                const y = tankTop + Math.sin((x + waveOffset * 20) * 0.03) * 3;
+                if (x === 20) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            bubbles.forEach(b => {
+                b.y -= b.speed;
+                if (b.y < tankTop) {
+                    b.y = h - 20;
+                    b.x = 30 + Math.random() * (w - 60);
+                }
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(126, 206, 199, ${b.opacity})`;
+                ctx.fill();
+            });
+
+            fishes.forEach(fish => {
+                fish.x += fish.speed;
+                fish.tailAngle += 0.15;
+
+                if (fish.x > w - 50 || fish.x < 50) {
+                    fish.speed *= -1;
+                }
+
+                ctx.save();
+                ctx.translate(fish.x, fish.y);
+                if (fish.speed < 0) ctx.scale(-1, 1);
+
+                ctx.fillStyle = fish.color;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, fish.size, fish.size / 2, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                const tailWiggle = Math.sin(fish.tailAngle) * 4;
+                ctx.beginPath();
+                ctx.moveTo(-fish.size + 2, 0);
+                ctx.lineTo(-fish.size - 8, -6 + tailWiggle);
+                ctx.lineTo(-fish.size - 8, 6 + tailWiggle);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.fillStyle = "#08171d";
+                ctx.beginPath();
+                ctx.arc(fish.size / 2, -2, 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            });
+
+            requestAnimationFrame(drawAquaponicSystem);
+        }
+
+        drawAquaponicSystem();
+    </script>
+</body>
+</html>
